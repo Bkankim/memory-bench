@@ -1,0 +1,24 @@
+{
+  "backend": "hindsight",
+  "capabilities": {
+    "name": "hindsight",
+    "offline": true,
+    "llm_required": false,
+    "native_isolation": false,
+    "audit_log": true,
+    "notes": "No identity->bank enforcement in Hindsight itself; isolation enforced by the Hindsight-Crew gateway (deny-by-default ACL + audit). Runs offline with LLM_PROVIDER=none."
+  },
+  "provision_ok": true,
+  "retain_ok": "8/8",
+  "recall_accuracy": 1.0,
+  "recall_hits": "8/8",
+  "retain_latency_ms": {
+    "p50": 32.3,
+    "p95": 92.7
+  },
+  "recall_latency_ms": {
+    "p50": 153.0,
+    "p95": 206.7
+  },
+  "misses": []
+}

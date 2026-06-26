@@ -1,0 +1,32 @@
+{
+  "backend": "mem0",
+  "status": "not-run-here",
+  "reason": "This host is Python 3.9.6 on a ~2GB Docker VM. mem0ai latest requires Python>=3.10; offline mem0 needs a local LLM service (ollama) + a pulled model (multi-GB) since the DEFAULT llm is OpenAI (cloud+key). That does not fit the 2GB VM. Adapter raised the honest error instead of faking numbers.",
+  "capabilities": {
+    "name": "mem0",
+    "offline": false,
+    "llm_required": true,
+    "native_isolation": true,
+    "audit_log": true,
+    "notes": "Identity is first-class (user_id scoping; per-user API keys + request_logs audit on the managed platform). Default LLM=OpenAI (cloud). posthog telemetry on by default. Latest requires Python>=3.10."
+  },
+  "install_profile": {
+    "resolved_on_py39": "mem0ai-2.0.0 (pip --dry-run)",
+    "latest": "2.0.8 (requires_python <4.0,>=3.10)",
+    "core_deps": [
+      "openai>=1.90 (default LLM = cloud)",
+      "qdrant-client (default vector store)",
+      "posthog (telemetry, phones home unless MEM0_TELEMETRY=False)"
+    ]
+  },
+  "recall_accuracy": null,
+  "recall_hits": "not-measured-here",
+  "retain_latency_ms": {
+    "p50": null,
+    "p95": null
+  },
+  "recall_latency_ms": {
+    "p50": null,
+    "p95": null
+  }
+}

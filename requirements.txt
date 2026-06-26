@@ -1,0 +1,2 @@
+httpx>=0.27
+# mem0 backend (optional, Python>=3.10): pip install mem0ai ; plus a local ollama for offline
