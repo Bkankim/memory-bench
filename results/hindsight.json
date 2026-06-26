@@ -13,12 +13,12 @@
   "recall_accuracy": 1.0,
   "recall_hits": "8/8",
   "retain_latency_ms": {
-    "p50": 32.3,
-    "p95": 92.7
+    "p50": 31.3,
+    "p95": 70.3
   },
   "recall_latency_ms": {
-    "p50": 153.0,
-    "p95": 206.7
+    "p50": 194.3,
+    "p95": 224.6
   },
   "misses": []
 }
