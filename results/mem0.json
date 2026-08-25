@@ -1,32 +1,32 @@
 {
   "backend": "mem0",
-  "status": "not-run-here",
-  "reason": "This host is Python 3.9.6 on a ~2GB Docker VM. mem0ai latest requires Python>=3.10; offline mem0 needs a local LLM service (ollama) + a pulled model (multi-GB) since the DEFAULT llm is OpenAI (cloud+key). That does not fit the 2GB VM. Adapter raised the honest error instead of faking numbers.",
+  "status": "measured",
+  "run_at": "2026-08-25T14:18:14.452448+00:00",
+  "run_env": {
+    "python": "3.13.14",
+    "host": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "ollama_installed": true,
+    "ollama_model": "qwen2.5:0.5b"
+  },
   "capabilities": {
     "name": "mem0",
-    "offline": false,
+    "offline": true,
     "llm_required": true,
     "native_isolation": true,
     "audit_log": true,
-    "notes": "Identity is first-class (user_id scoping; per-user API keys + request_logs audit on the managed platform). Default LLM=OpenAI (cloud). posthog telemetry on by default. Latest requires Python>=3.10."
+    "notes": "This adapter runs fully local with Ollama, a HuggingFace embedder, and Chroma. mem0's library default uses an OpenAI cloud LLM, while this benchmark overrides that default. Identity is a first-class primitive through user_id scoping. MEM0_TELEMETRY=False disables PostHog for this run."
   },
-  "install_profile": {
-    "resolved_on_py39": "mem0ai-2.0.0 (pip --dry-run)",
-    "latest": "2.0.8 (requires_python <4.0,>=3.10)",
-    "core_deps": [
-      "openai>=1.90 (default LLM = cloud)",
-      "qdrant-client (default vector store)",
-      "posthog (telemetry, phones home unless MEM0_TELEMETRY=False)"
-    ]
-  },
-  "recall_accuracy": null,
-  "recall_hits": "not-measured-here",
+  "provision_ok": true,
+  "retain_ok": "8/8",
+  "recall_accuracy": 1.0,
+  "recall_hits": "8/8",
   "retain_latency_ms": {
-    "p50": null,
-    "p95": null
+    "p50": 13.3,
+    "p95": 151.5
   },
   "recall_latency_ms": {
-    "p50": null,
-    "p95": null
-  }
+    "p50": 11.4,
+    "p95": 409.1
+  },
+  "misses": []
 }

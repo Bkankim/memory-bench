@@ -15,12 +15,11 @@ or the local LLM service is unavailable, instead of silently faking results.
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional
 
 from .base import Capabilities, OpResult, RecallResult, timed
 
 
-def _default_config() -> dict:
+def _default_config() -> dict[str, object]:
     return {
         "embedder": {"provider": "huggingface",
                      "config": {"model": os.environ.get("MB_EMBED_MODEL", "BAAI/bge-small-en-v1.5")}},
@@ -34,33 +33,31 @@ def _default_config() -> dict:
 
 
 class Mem0Backend:
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict[str, object] | None = None):
         os.environ.setdefault("MEM0_TELEMETRY", "False")  # disable posthog phone-home for a fair on-prem run
         try:
             from mem0 import Memory  # type: ignore
         except Exception as e:  # honest hard-fail, never fake
             raise RuntimeError(
-                f"mem0 unavailable: {e}. Install on Python>=3.10: `pip install mem0ai`, run a local "
-                f"ollama (`ollama pull qwen2.5:0.5b`) for offline LLM, then re-run. "
-                f"This environment is Python 3.9 / 2GB VM, so mem0 offline was NOT run here."
+                f"mem0 unavailable: {e}. Install on Python>=3.10 with `uv pip install mem0ai`, "
+                f"run local ollama (`ollama pull qwen2.5:0.5b`), then re-run."
             )
         self._mem = Memory.from_config(config or _default_config())
 
     def capabilities(self) -> Capabilities:
         return Capabilities(
-            name="mem0", offline=False, llm_required=True,
+            name="mem0", offline=True, llm_required=True,
             native_isolation=True, audit_log=True,
-            notes="Identity is a first-class primitive (user_id scoping; per-user API keys + request "
-                  "audit log on the managed platform). BUT default LLM is OpenAI (cloud); offline needs "
-                  "a local LLM service (ollama). Latest requires Python>=3.10; posthog telemetry is on by "
-                  "default. offline=False reflects the out-of-box default (cloud LLM); flip to True only "
-                  "with a local ollama model configured.",
+            notes="This adapter runs fully local with Ollama, a HuggingFace embedder, and Chroma. "
+                  "mem0's library default uses an OpenAI cloud LLM, while this benchmark overrides "
+                  "that default. Identity is a first-class primitive through user_id scoping. "
+                  "MEM0_TELEMETRY=False disables PostHog for this run.",
         )
 
     def provision(self, scope: str) -> OpResult:
         return OpResult(ok=True, latency_ms=0.0, raw="mem0 scopes are implicit via user_id")
 
-    def retain(self, scope: str, content: str, metadata: Optional[Dict] = None, *, actor: Optional[str] = None) -> OpResult:
+    def retain(self, scope: str, content: str, metadata: dict[str, str] | None = None, *, actor: str | None = None) -> OpResult:
         def _do():
             # infer=False -> raw store without LLM extraction (parity with Hindsight LLM=none)
             return self._mem.add(content, user_id=scope, metadata=metadata or {}, infer=False)
@@ -70,13 +67,13 @@ class Mem0Backend:
         except Exception as e:
             return OpResult(ok=False, latency_ms=0.0, error=str(e))
 
-    def recall(self, scope: str, query: str, *, actor: Optional[str] = None) -> RecallResult:
+    def recall(self, scope: str, query: str, *, actor: str | None = None) -> RecallResult:
         def _do():
-            return self._mem.search(query, user_id=scope)
+            return self._mem.search(query, filters={"user_id": scope})
         try:
             res, ms = timed(_do)
             items = res.get("results", res) if isinstance(res, dict) else res
-            texts: List[str] = []
+            texts: list[str] = []
             for it in (items or []):
                 texts.append(it.get("memory") or it.get("text") or it.get("content") or "")
             return RecallResult(ok=True, latency_ms=ms, texts=texts, raw=res)

@@ -10,17 +10,43 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
+import shutil
 import statistics
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import TypedDict
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from adapters.base import Capabilities
 
 
-def load_dataset(path: str) -> dict:
+class QueryItem(TypedDict):
+    q: str
+    expect: str
+
+
+class Dataset(TypedDict):
+    facts: list[str]
+    queries: list[QueryItem]
+
+
+class RunEnvironment(TypedDict):
+    python: str
+    host: str
+    ollama_installed: bool
+    ollama_model: str
+
+
+class RunMetadata(TypedDict):
+    run_at: str
+    run_env: RunEnvironment
+
+
+def load_dataset(path: str) -> Dataset:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
@@ -45,6 +71,18 @@ def pct(xs, p):
     return round(xs[k], 1)
 
 
+def current_run_metadata() -> RunMetadata:
+    return {
+        "run_at": datetime.now(timezone.utc).isoformat(),
+        "run_env": {
+            "python": platform.python_version(),
+            "host": platform.platform(),
+            "ollama_installed": shutil.which("ollama") is not None,
+            "ollama_model": os.environ.get("MB_OLLAMA_MODEL", "qwen2.5:0.5b"),
+        },
+    }
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", required=True)
@@ -55,7 +93,23 @@ def main():
     args = ap.parse_args()
 
     ds = load_dataset(args.dataset)
-    be = build_backend(args.backend)
+    out = Path(args.out or f"results/{args.backend}.json")
+    metadata = current_run_metadata()
+    try:
+        be = build_backend(args.backend)
+    except Exception as exc:  # noqa: BROAD_EXCEPT_OK - CLI boundary records backend startup failures
+        result = {
+            "backend": args.backend,
+            "status": "failed",
+            **metadata,
+            "reason": str(exc),
+            "recall_accuracy": None,
+        }
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"backend startup failed: {exc}", file=sys.stderr)
+        print(f"  wrote {out}", file=sys.stderr)
+        return 1
     caps: Capabilities = be.capabilities()
 
     prov = be.provision(args.scope)
@@ -83,6 +137,8 @@ def main():
 
     result = {
         "backend": args.backend,
+        "status": "measured",
+        **metadata,
         "capabilities": caps.__dict__,
         "provision_ok": prov.ok,
         "retain_ok": f"{n_retain_ok}/{len(ds['facts'])}",
@@ -92,15 +148,15 @@ def main():
         "recall_latency_ms": {"p50": pct(recall_ms, 50), "p95": pct(recall_ms, 95)},
         "misses": misses,
     }
-    out = args.out or f"results/{args.backend}.json"
-    Path(out).parent.mkdir(parents=True, exist_ok=True)
-    Path(out).write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({k: result[k] for k in ("backend", "recall_accuracy", "recall_hits",
                                              "retain_latency_ms", "recall_latency_ms")}, ensure_ascii=False))
     print(f"  caps: offline={caps.offline} llm_required={caps.llm_required} "
           f"native_isolation={caps.native_isolation} audit_log={caps.audit_log}")
     print(f"  wrote {out}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

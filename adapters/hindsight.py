@@ -7,11 +7,14 @@ Scope = bank; actor token selects the principal (the gateway enforces ACL). Offl
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, Final, List, Optional
 
 import httpx
 
 from .base import Capabilities, MemoryBackend, OpResult, RecallResult, timed
+
+_BENCHMARK_PREFIX: Final = "[benchmark] "
+_BENCHMARK_TAGS: Final = ("project:memory-bench", "kind:benchmark")
 
 
 class HindsightBackend:
@@ -49,10 +52,15 @@ class HindsightBackend:
         except Exception as e:
             return OpResult(ok=False, latency_ms=0.0, error=str(e))
 
-    def retain(self, scope: str, content: str, metadata: Optional[Dict] = None, *, actor: Optional[str] = None) -> OpResult:
-        item = {"content": content}
+    def retain(self, scope: str, content: str, metadata: Optional[Dict[str, str]] = None, *, actor: Optional[str] = None) -> OpResult:
         if metadata:
-            item["metadata"] = metadata
+            item = {
+                "content": f"{_BENCHMARK_PREFIX}{content}",
+                "tags": list(_BENCHMARK_TAGS),
+                "metadata": metadata,
+            }
+        else:
+            item = {"content": f"{_BENCHMARK_PREFIX}{content}", "tags": list(_BENCHMARK_TAGS)}
         def _do():
             return self.http.post(self._path(scope, "/memories"), json={"items": [item]},
                                   headers={"authorization": f"Bearer {self._tok(actor)}"})

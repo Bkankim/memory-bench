@@ -1,30 +1,33 @@
-# mem0 vs Hindsight — same-conditions comparison
+# mem0 vs Hindsight - same-conditions comparison
 
-> MEASURED = ran live in this repo's harness. DOCUMENTED = from spec / pip dry-run / vendor docs.
+> MEASURED = ran live in this repo's harness. DOCUMENTED = from spec / dependency inspection / vendor docs.
 
 - Hindsight: **MEASURED** (live via the Hindsight-Crew gateway, offline LLM=none).
-- mem0: **DOCUMENTED** — This host is Python 3.9.6 on a ~2GB Docker VM. mem0ai latest requires Python>=3.10; offline mem0 needs a local LLM service (ollama) + a pulled model (multi-GB) since the DEFAULT llm is OpenAI (cloud+key). That does not fit the 2GB VM. Adapter raised the honest error instead of faking numbers.
+- mem0: **MEASURED** - live with the local Ollama model configured by the adapter
 
 ## Results / capability matrix
 
 | Axis | Hindsight | mem0 |
 |---|---|---|
-| recall accuracy (eval-mini, 8 q) | 8/8 (MEASURED) | not-measured-here (DOCUMENTED) |
-| retain latency p50/p95 ms | 32.3/92.7 (MEASURED) | — (not run here) |
-| recall latency p50/p95 ms | 153.0/206.7 (MEASURED) | — (not run here) |
-| offline (no cloud) | True | False (default LLM=OpenAI cloud) |
-| extraction LLM required | False (native LLM=none mode) | True (ollama needed for offline) |
+| recall accuracy (eval-mini, 8 q) | 8/8 (MEASURED) | 8/8 (MEASURED) |
+| retain latency p50/p95 ms | 5466.0/6466.8 (MEASURED) | 13.3/151.5 (MEASURED) |
+| recall latency p50/p95 ms | 399.3/1190.0 (MEASURED) | 11.4/409.1 (MEASURED) |
+| benchmark interpreter | Python 3.13.14 | Python 3.13.14 |
+| benchmark host | macOS-26.5.2-arm64-arm-64bit-Mach-O | macOS-26.5.2-arm64-arm-64bit-Mach-O |
+| benchmark LLM configuration | LLM=none | Ollama qwen2.5:0.5b (0.5B, required provider) |
+| offline (no cloud) | True | True (local Ollama config; library default uses cloud) |
+| extraction LLM required | False (native LLM=none mode) | True (provider required; this eval uses `infer=False`) |
 | isolation enforcement | gateway (deny-by-default ACL) | native (user_id + per-user keys) |
 | audit log | True (gateway, token fingerprints) | True (platform request_logs) |
 | telemetry phone-home | none | posthog on by default |
 | host footprint | single Docker image ~0.85GB, no host Python | Python>=3.10 lib + LLM service + vector store |
 
-## Decision matrix — which fits when
+## Decision matrix - which fits when
 
 | Situation | Better fit | Why |
 |---|---|---|
-| On-prem / air-gapped / no external cloud | **Hindsight** | native LLM=none offline mode, single image, no telemetry; fit a 2GB VM here |
-| Constrained host (≤2GB), no GPU | **Hindsight** | mem0 offline needs a local LLM service (ollama+model) that did not fit |
+| On-prem / air-gapped / no external cloud | **Depends on LLM budget** | Hindsight runs natively with LLM=none; mem0 also runs offline here when a local Ollama service is available |
+| Constrained host / no local LLM budget | **Hindsight** | mem0 adds an Ollama service and model while Hindsight supports native LLM=none |
 | Strict tenant isolation you must *prove* | **Hindsight + gateway** | deny-by-default ACL + audit fingerprints, verified by a negative-access CI gate |
 | Fast bolt-on memory with cloud LLM + DX | **mem0** | identity is first-class, huge ecosystem, managed platform with keys+audit |
 | Need graph memory / multi-store routing | **mem0** | vector+graph+KV hybrid out of the box |
@@ -32,7 +35,8 @@
 
 ## Honest limitations of this run
 
-- mem0 was **not run live here** (Python 3.9 / ~2GB Docker VM; mem0 latest needs 3.10+ and offline needs ollama+model). Its cells are DOCUMENTED from spec/dry-run, not measured.
-- The eval set is a tiny single-hop smoke set (8 q), not LongMemEval/LoCoMo. It proves the harness + the Hindsight path; full benchmark datasets are the next step.
-- Both adapters use raw/no-LLM retain (Hindsight LLM=none; mem0 `infer=False`) for parity; LLM-extraction quality is a separate axis.
+- Both measured results use Python 3.13.14 on macOS-26.5.2-arm64-arm-64bit-Mach-O; interpreter and host are aligned.
+- LLM configuration is asymmetric and explicitly labeled: Hindsight uses LLM=none, while mem0 is configured with Ollama qwen2.5:0.5b. This 0.5B model is very small and would disadvantage mem0 in extraction-enabled tests; eval-mini uses `infer=False`, so extraction quality is not measured.
+- The eval set is a tiny single-hop smoke set (8 q), not LongMemEval/LoCoMo. It proves both adapter paths under identical inputs, not general memory quality.
+- Both adapters use raw/no-LLM retain (Hindsight LLM=none; mem0 `infer=False`) for input parity; LLM-extraction quality is a separate, unmeasured axis.
 
