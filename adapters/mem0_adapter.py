@@ -69,6 +69,7 @@ class Mem0Backend:
 
     def recall(self, scope: str, query: str, *, actor: str | None = None) -> RecallResult:
         def _do():
+            # mem0 2.x accepts user_id directly on add but requires entity filters on search.
             return self._mem.search(query, filters={"user_id": scope})
         try:
             res, ms = timed(_do)
