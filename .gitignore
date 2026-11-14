@@ -7,3 +7,5 @@ results/.chroma/
 _workspace/
 .env.local
 secrets/
+.env
+.DS_Store
