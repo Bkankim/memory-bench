@@ -8,4 +8,6 @@ _workspace/
 .env.local
 secrets/
 .env
+.env.*
+!.env.example
 .DS_Store
