@@ -2,7 +2,7 @@
 
 A **same-conditions** comparison harness for self-hosted AI memory layers - **mem0 vs Hindsight** - built to develop discernment about *which open-source memory fits which situation* (on-prem vs cloud, constrained vs not, isolation-critical vs DX-first).
 
-It is the downstream eval companion to [Hindsight-Crew](https://github.com/Bkankim/Hindsight-Crew): it plugs the live Hindsight-Crew gateway in as one backend and mem0 as the other, behind one adapter interface, and scores them on the axes that actually drive the decision.
+It is the downstream eval companion to [Hindsight-Crew](https://github.com/Bkankim/Hindsight-Crew-Public): it plugs the live Hindsight-Crew gateway in as one backend and mem0 as the other, behind one adapter interface, and scores them on the axes that actually drive the decision.
 
 ## Thesis
 
